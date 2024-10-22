@@ -77,7 +77,7 @@ def scrape_job_data(driver):
     wait = WebDriverWait(driver, 10)
 
     # Locate and fill in the location field
-    location_field = wait.until(EC.presence_of_element_located((By.ID, 'initialSearchBox__395')))
+    location_field = wait.until(EC.presence_of_element_located((By.NAME, 'locationSearch')))
     location_field.clear()
     location_field.send_keys('Australia')
         
