@@ -137,6 +137,10 @@ def save_df_to_csv(df, output_dir):
         os.makedirs(output_dir)
 
     file_path = os.path.join(output_dir, 'LMA_job_data.csv')
+
+    # Remove duplicate rows
+    df = df.drop_duplicates(subset=['Job Title', 'Location'], keep='first')
+    
     df.to_csv(file_path, index=False)
     print(f"\nData saved to {file_path}")
     print(f"Total jobs scraped: {len(df)}")
