@@ -13,7 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 def configure_webdriver():
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
+    #options.add_argument("--headless")
     options.add_argument('--log-level=1')
     options.add_argument("--window-size=1920,1080")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -49,59 +49,59 @@ def scrape_current_page(soup):
     """Scrapes job data from the current page's soup."""
     jobs_data = []
     job_listings = soup.find_all('div', {'class': 'JobListingCard__Container-sc-dablja-0'})
-    
+
     if not job_listings:
         print("No jobs found on current page")
         return jobs_data
-        
+
     print(f"Found {len(job_listings)} jobs on current page")
-    
+
     for job in job_listings:
         try:
             # Find job link and title
             link_element = job.find('a')
             if not link_element:
                 continue
-                
+
             link = link_element.get('href')
             if not link:
                 continue
-            
+
             # Make the link absolute
             if link.startswith('/'):
                 link = 'https://www.northropgrumman.com' + link
-                
+
             job_title = link_element.find('h2').text.strip() if link_element.find('h2') else ''
-            
-            # Find location
-            location_element = job.find('span', {'class': 'location'})
-            location = location_element.text.strip() if location_element else 'N/A'
-            
+
+            # Find locations
+            location_elements = job.find_all('span', {'class': 'location'})
+            locations = ', '.join([loc.text.strip().replace('|', '') for loc in location_elements])
+
             # Extract job classification from URL
             job_classification = link.split('/')[2] if len(link.split('/')) > 2 else 'N/A'
-            
+
             jobs_data.append({
                 'Link': link,
                 'Job Title': job_title,
                 'Job Classification': job_classification,
-                'Location': location,
+                'Locations': locations,
                 'Company': 'Northrop Grumman'
             })
-            
-            print(f"Scraped: {job_title} - {location}")
-            
+
+            print(f"Scraped: {job_title} - {locations}")
+
         except Exception as e:
             print(f"Error scraping job: {e}")
-            
+
     return jobs_data
 
 def scrape_job_data(driver, Job_Classification, location):
-    df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
-   
+    df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Locations', 'Company'])
+
     url = 'https://www.northropgrumman.com/jobs?country=australia'
     driver.get(url)
     print(f"Scraping {url}")
-    
+
     # Wait for initial page load
     wait = WebDriverWait(driver, 10)
     wait.until(EC.presence_of_element_located((By.CLASS_NAME, "JobListingCard__Container-sc-dablja-0")))
@@ -109,42 +109,42 @@ def scrape_job_data(driver, Job_Classification, location):
 
     page_number = 1
     all_jobs_data = []
-    
+
     while True:
         print(f"\nProcessing page {page_number}")
-        
+
         # Expand all "show more" buttons on current page
         expand_all_show_more(driver)
-        
+
         # Scrape the current page
         soup = BeautifulSoup(driver.page_source, 'lxml')
         jobs_data = scrape_current_page(soup)
-        
+
         # Apply filters if specified
         if Job_Classification or location:
             filtered_jobs = []
             for job in jobs_data:
                 if Job_Classification and Job_Classification.lower() not in job['Job Classification'].lower():
                     continue
-                if location and location.lower() not in job['Location'].lower():
+                if location and location.lower() not in ','.join(job['Locations']).lower():
                     continue
                 filtered_jobs.append(job)
             jobs_data = filtered_jobs
-        
+
         all_jobs_data.extend(jobs_data)
-        
+
         # Check for next page
         try:
             next_button = driver.find_element(By.CSS_SELECTOR, 'a.filter-search-page.next[rel="next"]')
             if next_button.get_attribute('aria-disabled') == 'true':
                 print("Reached last page")
                 break
-                
+
             driver.execute_script("arguments[0].click();", next_button)
             print("Moving to next page")
             page_number += 1
             time.sleep(3)  # Wait for new page to load
-            
+
         except NoSuchElementException:
             print("No more pages available")
             break
@@ -160,7 +160,7 @@ def scrape_job_data(driver, Job_Classification, location):
 def save_df_to_csv(df, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     file_path = os.path.join(output_dir, f'NG_job_data_{timestamp}.csv')
     df.to_csv(file_path, index=False)
