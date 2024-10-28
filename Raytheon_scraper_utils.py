@@ -1,28 +1,16 @@
 import os
+import time
 import pandas as pd
 from bs4 import BeautifulSoup
-from selenium import webdriver
+from seleniumbase import Driver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-import time
+from fake_useragent import UserAgent
 
 def configure_webdriver():
-    options = webdriver.ChromeOptions()
-    #options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--disable-infobars')
-    options.add_argument('--disable-blink-features=AutomationControlled')
-
-    service = ChromeService(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver = Driver(uc=True, headless=False)
 
     return driver
 
