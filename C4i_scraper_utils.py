@@ -65,6 +65,7 @@ def scrape_job_data(driver, Job_Classification, location):
                         location = location_element.text.strip()
                 else:
                     location = ''
+                print(f"Scraped job: {job_title} - {location}")
                 
                 new_data = pd.DataFrame({
                     'Link': [link_full], 
