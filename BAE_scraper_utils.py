@@ -59,16 +59,13 @@ def scrape_job_data(driver, Job_Classification, location):
                 link_full = 'https://careers.au.baesystems.com/jobtools/' + link
                 
                 job_title = link_element.text.strip()
-                #print(f"Job Title: {job_title}")
-
+                
                 company = 'BAE'
-                #print(f"Company: {company}")
-                                
+                                               
                 job_classification = columns[1].text.strip()
-                #print(f"Job Classification: {job_classification}")
-
+                
                 location = columns[3].text.strip()
-                #print(f"Location: {location}")
+                print(f"Scraped job: {job_title} - {location}")
 
                 new_data = pd.DataFrame({
                     'Link': [link_full], 
