@@ -125,18 +125,15 @@ def scrape_job_data(driver):
                 break
 
             try:
-                next_button = driver.find_element(By.XPATH, '//ppc-content[text()="Next"]')
-                driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
-                time.sleep(0.5)
-                driver.execute_script("arguments[0].click();", next_button)
-                time.sleep(1)
-
-                page_num += 1
-                WebDriverWait(driver, 10).until(
-                    lambda driver: driver.execute_script("return document.readyState") == "complete"
+                next_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, '//ppc-content[text()="Next"]'))
                 )
+                next_button.click()
+            except TimeoutException:
+                print("Next button not found or clickable - reached last page")
+                break
             except Exception as e:
-                print(f"Error navigating to next page: {e}")
+                print(f"An error occurred: {e}")
                 break
 
     except Exception as e:
