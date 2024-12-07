@@ -33,6 +33,13 @@ def scrape_job_data(driver, Job_Classification, location):
     driver.get(url)
     print(f"Scraping {url}")
 
+    # Close cookies if the cookie notice is present
+    try:
+        cookie_button = driver.find_element(By.ID, "cookie-acknowledge")
+        cookie_button.click()
+    except NoSuchElementException:
+        print("No cookie button found. Continuing with scraping.")
+
     last_page = False  # Initialize the last_page flag here
 
     while True:
