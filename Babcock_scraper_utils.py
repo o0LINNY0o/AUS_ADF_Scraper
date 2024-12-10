@@ -12,7 +12,10 @@ from selenium.webdriver.support import expected_conditions as EC
 
 def configure_webdriver():
     options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
     options.add_argument('--log-level=1')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--ignore-ssl-errors')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
@@ -63,7 +66,14 @@ def scrape_job_data(driver, Job_Classification, location):
                 Job_Classification = box.get('data-ph-at-job-category-text', '')
 
                 location_tag = box.find('span', {'class': 'jobLocation'})
-                location = location_tag.text.strip() if location_tag else ''
+                if location_tag:
+                    # Remove the <small> tag content
+                    small_tag = location_tag.find('small')
+                    if small_tag:
+                        small_tag.decompose()  # Remove the <small> tag
+                    location = location_tag.text.strip()
+                else:
+                    location = ''
 
                 new_data = pd.DataFrame({
                     'Link': [link_full],
