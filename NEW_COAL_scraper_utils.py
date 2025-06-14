@@ -25,47 +25,40 @@ def configure_webdriver():
             )
     return driver
 
-def scrape_job_data(driver, Job_Classification, location):
+def scrape_job_data(driver):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
 
-    url = 'https://careers.airservicesaustralia.com/caw/en/listing/'
+    url = 'https://ncig.com.au/who-we-are/recruitment/'
     driver.get(url)
     print(f"Scraping {url}")
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    # Find the tbody containing job listings
-    job_tbody = soup.find('tbody', {'id': 'recent-jobs-content'})
-    
-    if not job_tbody:
-        print("No jobs found")
-        return df
+    job_links = soup.select('div.acf-flex-row.wysiwyg a[href]')
 
-    # Process job rows in pairs (job details row and summary row)
-    job_rows = job_tbody.find_all('tr')
-    
-    for i in range(0, len(job_rows), 2):  # Step by 2 to process pairs of rows
+    for link in job_links:
         try:
-            job_row = job_rows[i]
-            
-            # Extract job details
-            job_link = job_row.find('a', {'class': 'job-link'})
-            if not job_link:
-                continue
-                
-            link_full = 'https://careers.airservicesaustralia.com' + job_link['href']
-            job_title = job_link.text.strip()
-            location = job_row.find('span', {'class': 'location'}).text.strip()
-            company = 'AirService'
+            job_title = link.text.strip()
+            link_full = link.get('href')
 
-            print(f"Scraped job: {job_title} - {location}")
-            
+            # Exclude unwanted phrases and links
+            if ("Talent Community" in job_title or
+                "Join our" in job_title or
+                "Employment Management Approach" in job_title or
+                "LinkedIn" in job_title or
+                "ncig.com.au/policies-reports/management-approaches/employment" in link_full or
+                "linkedin.com/company/newcastle-coal-infrastructure-group-pty-ltd" in link_full):
+                continue
+
+            company = 'NCIG'
+            job_classification = 'N/A'
+            location = 'Newcastle'
+
             new_data = pd.DataFrame({
                 'Link': [link_full],
                 'Job Title': [job_title],
-                'Job Classification': ['N/A'],
+                'Job Classification': [job_classification],
                 'Location': [location],
-                'Company': [company]
-            })
+                'Company': [company] })
 
             df = pd.concat([df, new_data], ignore_index=True)
 
@@ -85,7 +78,7 @@ def save_df_to_csv(df, output_dir):
         os.makedirs(output_dir)
 
     # Define the file path for the CSV
-    file_path = os.path.join(output_dir, 'AirService_job_data.csv')
+    file_path = os.path.join(output_dir, 'NCIG_job_data.csv')
 
     # Save the DataFrame to a CSV file
     df.to_csv(file_path, index=False)
@@ -95,7 +88,7 @@ def save_df_to_csv(df, output_dir):
 if __name__ == "__main__":
     driver = configure_webdriver()
     try:
-        df = scrape_job_data(driver, 'Engineering', 'Australia')
+        df = scrape_job_data(driver)
         save_df_to_csv(df, output_dir)
     finally:
         driver.quit()

@@ -35,26 +35,27 @@ def configure_webdriver():
 def scrape_job_data(driver, Job_Classification, location):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
     page = 0
-    jobs_per_page = 10
+    max_pages = 100  # Set a maximum number of pages to scrape
 
-    while True:
-        url = f'https://careers.cae.com/global/en/search-results?from={page * jobs_per_page}&s=1&lk=Australia'
-        driver.get(url)
+    while page < max_pages:
         print(f"Scraping page {page + 1}")
 
         if page == 0:
+            url = f'https://cae.wd3.myworkdayjobs.com/en-US/career?q=australia'
+            driver.get(url)
+
             # Accept cookies only on first page
             wait = WebDriverWait(driver, 10)
             try:
                 button = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="onetrust-accept-btn-handler"]')))
                 driver.execute_script("arguments[0].click()", button)
-                time.sleep(2)
+                time.sleep(1)
 
                 # Select Australia by text
                 australia_button = wait.until(EC.presence_of_element_located((By.XPATH, '//span[text()="Australia"]')))
                 driver.execute_script("arguments[0].scrollIntoView(true);", australia_button)
                 driver.execute_script("arguments[0].click();", australia_button)
-                time.sleep(2)
+                time.sleep(1)
 
             except TimeoutException as e:
                 print(f"TimeoutException: {e}")
@@ -65,13 +66,13 @@ def scrape_job_data(driver, Job_Classification, location):
 
         # Wait for job listings to be present
         try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ul[data-ph-at-id="jobs-list"] li.jobs-list-item')))
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'ul[aria-label^="Page"] li.css-1q2dra3')))
         except TimeoutException:
             print("No jobs found on current page")
             break
 
         soup = BeautifulSoup(driver.page_source, 'lxml')
-        job_listings = soup.select('ul[data-ph-at-id="jobs-list"] li.jobs-list-item')
+        job_listings = soup.select('ul[aria-label^="Page"] li.css-1q2dra3')
 
         if not job_listings:
             print("No jobs found on current page")
@@ -79,13 +80,13 @@ def scrape_job_data(driver, Job_Classification, location):
 
         for job in job_listings:
             try:
-                job_link = job.find('a', {'data-ph-at-id': 'job-link'})
+                job_link = job.find('a', {'data-automation-id': 'jobTitle'})
                 if not job_link:
                     continue
 
-                link_full = job_link.get('href', '')
-                job_title = job_link.get('data-ph-at-job-title-text', '')
-                location = job_link.get('data-ph-at-job-location-text', 'N/A')
+                link_full = f"https://cae.wd3.myworkdayjobs.com{job_link.get('href', '')}"
+                job_title = job_link.text.strip()
+                location = job.find('dd', {'class': 'css-129m7dg'}).text.strip()
                 company = 'CAE'
 
                 new_data = pd.DataFrame({
@@ -104,12 +105,22 @@ def scrape_job_data(driver, Job_Classification, location):
 
         # Check for the "View next page" button
         try:
-            next_page_button = wait.until(EC.presence_of_element_located((By.XPATH, '//a[@aria-label="View next page"]')))
-            driver.execute_script("arguments[0].click();", next_page_button)
-            page += 1
-            time.sleep(1)
+            next_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="next"]')))
+            if next_button:
+                next_button.click()
+                print("Clicked next page button (direct)")
+                page += 1
+                time.sleep(1)  # Wait for the next page to load
+                # Re-fetch the page source after navigating to the next page
+                soup = BeautifulSoup(driver.page_source, 'lxml')
+            else:
+                print("No more pages to scrape")
+                break
         except TimeoutException:
             print("No more pages to scrape")
+            break
+        except Exception as e:
+            print(f"Error clicking next button: {e}")
             break
 
     return df

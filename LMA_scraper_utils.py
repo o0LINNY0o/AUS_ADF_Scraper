@@ -87,7 +87,7 @@ def scrape_job_data(driver):
 
     # Initial wait for jobs to load
     print("Waiting for initial jobs to load...")
-    time.sleep(10)
+    time.sleep(2)
 
     page_num = 1
     while True:
@@ -116,7 +116,7 @@ def scrape_job_data(driver):
                 if next_button.is_displayed() and next_button.is_enabled():
                     driver.execute_script("arguments[0].click();", next_button)
                     print("Clicked Next button, waiting for new jobs to load...")
-                    time.sleep(10)  # Wait for new content to load
+                    time.sleep(2)  # Wait for new content to load
                     page_num += 1
                 else:
                     print("Next button not clickable - reached last page")

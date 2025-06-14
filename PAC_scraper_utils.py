@@ -2,11 +2,11 @@ import os
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium_stealth import stealth
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 def configure_webdriver():
     options = webdriver.ChromeOptions()
@@ -25,77 +25,72 @@ def configure_webdriver():
             )
     return driver
 
-def scrape_job_data(driver, Job_Classification, location):
+def scrape_job_data(driver):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
 
-    url = 'https://careers.airservicesaustralia.com/caw/en/listing/'
+    url = 'https://pacificaerospaceconsulting.com.au/careers/job-opportunities/'
     driver.get(url)
     print(f"Scraping {url}")
+    
+    # Wait for page to load
+    time.sleep(5)
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    # Find the tbody containing job listings
-    job_tbody = soup.find('tbody', {'id': 'recent-jobs-content'})
     
-    if not job_tbody:
-        print("No jobs found")
+    # Find all job links based on the new structure
+    job_boxes = soup.find_all('a', class_='elementor-element', href=True)
+
+    if not job_boxes:
+        print("No jobs found on the page.")
         return df
 
-    # Process job rows in pairs (job details row and summary row)
-    job_rows = job_tbody.find_all('tr')
-    
-    for i in range(0, len(job_rows), 2):  # Step by 2 to process pairs of rows
+    for box in job_boxes:
         try:
-            job_row = job_rows[i]
+            link = box.get('href')
             
-            # Extract job details
-            job_link = job_row.find('a', {'class': 'job-link'})
-            if not job_link:
-                continue
-                
-            link_full = 'https://careers.airservicesaustralia.com' + job_link['href']
-            job_title = job_link.text.strip()
-            location = job_row.find('span', {'class': 'location'}).text.strip()
-            company = 'AirService'
+            # Find the job title within the job box
+            title_element = box.find('h3', class_='elementor-heading-title')
+            job_title = title_element.text.strip() if title_element else 'No Title Found'
+            
+            # Set default values
+            company = 'PAC Aero'
+            job_classification = 'N/A'
+            location = 'Various'
 
-            print(f"Scraped job: {job_title} - {location}")
-            
             new_data = pd.DataFrame({
-                'Link': [link_full],
+                'Link': [link],
                 'Job Title': [job_title],
-                'Job Classification': ['N/A'],
+                'Job Classification': [job_classification],
                 'Location': [location],
                 'Company': [company]
             })
 
             df = pd.concat([df, new_data], ignore_index=True)
+            print(f"Found job: {job_title}")
 
         except Exception as e:
             print(f"Error scraping job: {e}")
 
     return df
 
-# Create the .csv_files directory if it doesn't exist
-output_dir = '.\\csv_files'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
 def save_df_to_csv(df, output_dir):
-    # Ensure the directory exists
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Define the file path for the CSV
-    file_path = os.path.join(output_dir, 'AirService_job_data.csv')
-
-    # Save the DataFrame to a CSV file
+    file_path = os.path.join(output_dir, 'PAC_job_data.csv')
     df.to_csv(file_path, index=False)
     print(f"Data saved to {file_path}")
 
 # Main execution
 if __name__ == "__main__":
+    output_dir = '.\\csv_files'
     driver = configure_webdriver()
     try:
-        df = scrape_job_data(driver, 'Engineering', 'Australia')
-        save_df_to_csv(df, output_dir)
+        df = scrape_job_data(driver)
+        if not df.empty:
+            save_df_to_csv(df, output_dir)
+            print(f"Found {len(df)} jobs")
+        else:
+            print("No jobs were found to save")
     finally:
         driver.quit()

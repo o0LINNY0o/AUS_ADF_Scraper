@@ -79,6 +79,7 @@ def scrape_job_data(driver, Job_Classification, location):
                     
                 if location and location.lower() not in location.lower():
                     continue
+                print(f"Scraped job: {job_title} - {location}")
 
                 new_data = pd.DataFrame({
                     'Link': [link],

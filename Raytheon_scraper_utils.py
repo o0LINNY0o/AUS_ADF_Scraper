@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from fake_useragent import UserAgent
 
 def configure_webdriver():
-    driver = Driver(uc=True, headless=False)
+    driver = Driver(uc=True, headless=True)
 
     return driver
 
@@ -73,6 +73,8 @@ def scrape_current_page(driver):
             })
 
             df = pd.concat([df, new_data], ignore_index=True)
+
+            print(f"Scraped: {job_title} - {location}")
 
         except Exception as e:
             print(f"Error scraping individual job: {e}")

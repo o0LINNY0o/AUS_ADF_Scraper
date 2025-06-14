@@ -71,6 +71,8 @@ def scrape_job_data(driver, Job_Classification, location):
                     'Company': [company] })
 
                 df = pd.concat([df, new_data], ignore_index=True)
+
+                print(f"Scraped: {job_title} - {location}")
                 
             except Exception as e:
                 print(f"Error scraping job: {e}")

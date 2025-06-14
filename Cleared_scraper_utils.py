@@ -28,75 +28,81 @@ def configure_webdriver():
 def scrape_job_data(driver, Job_Classification, location):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
 
-    url = 'https://careers.kbr.com/us/en/search-results?qcountry=Australia'
+    url = 'https://www.clearedrecruitment.com.au/jobs/'
     driver.get(url)
     print(f"Scraping {url}")
 
+    page_number = 1
     while True:
-        # Wait for the page to load
-        driver.implicitly_wait(10)
+        print(f"Scraping page {page_number}")
         soup = BeautifulSoup(driver.page_source, 'lxml')
-        
-        # Find all job listings
-        job_listings = soup.find_all('a', {'data-ph-at-id': 'job-link'})
+        job_boxes = soup.find_all('div', {'class': 'main-result-info-panel'})
 
-        if not job_listings:
+        if not job_boxes:
             print("No jobs found on current page")
             break
 
-        for job in job_listings:
+        for box in job_boxes:
             try:
-                # Extract job details using data attributes
-                link = job.get('href', '')
-                job_title = job.get('data-ph-at-job-title-text', '')
-                job_classification = job.get('data-ph-at-job-category-text', '')
-                location = job.get('data-ph-at-job-location-text', '')
-                print(f"Scraped job: {job_title} - {location}")
+                # Extract job details
+                job_details = box.find('div', {'class': 'job-details'})
                 
+                # Get job title and link
+                job_title_element = job_details.find('div', {'class': 'job-title'}).find('a')
+                job_title = job_title_element.text.strip()
+                link_full = 'https://www.clearedrecruitment.com.au' + job_title_element['href']
+
+                # Get location
+                location = job_details.find('li', {'class': 'results-job-location'}).text.strip()
+
+                # Set job classification and company
+                job_classification = Job_Classification  # Using the input parameter
+                company = 'Cleared Recruitment'
+
                 new_data = pd.DataFrame({
-                    'Link': [link],
+                    'Link': [link_full],
                     'Job Title': [job_title],
                     'Job Classification': [job_classification],
                     'Location': [location],
-                    'Company': ['KBR']
+                    'Company': [company]
                 })
 
                 df = pd.concat([df, new_data], ignore_index=True)
+                
+                print(f"Scraped: {job_title} - {location}")
 
             except Exception as e:
                 print(f"Error scraping job: {e}")
 
-        # Check for next page
-        next_button = soup.find('a', {'data-ph-at-id': 'pagination-next-link'})
-        if not next_button or 'icon-arrow-right' not in str(next_button):
-            print("No more pages to scrape")
-            break
+        # Try to find the next page link
+        try:
+            next_page = soup.find('a', {'rel': 'next'})
+            if not next_page:
+                print("No more pages to scrape")
+                break
 
-        next_url = next_button.get('href')
-        if not next_url:
+            next_url = 'https://www.clearedrecruitment.com.au' + next_page['href']
+            driver.get(next_url)
+            page_number += 1
+
+        except Exception as e:
+            print(f"Error navigating to next page: {e}")
             break
-            
-        print(f"Moving to next page: {next_url}")
-        driver.get(next_url)
 
     return df
 
-# Create the .csv_files directory if it doesn't exist
-output_dir = '.\\csv_files'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
 def save_df_to_csv(df, output_dir):
-    # Ensure the directory exists
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # Define the file path for the CSV
-    file_path = os.path.join(output_dir, 'KBR_job_data.csv')
-
-    # Save the DataFrame to a CSV file
+    file_path = os.path.join(output_dir, 'Cleared_job_data.csv')
     df.to_csv(file_path, index=False)
     print(f"Data saved to {file_path}")
+
+# Create the output directory
+output_dir = '.\\csv_files'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Main execution
 if __name__ == "__main__":

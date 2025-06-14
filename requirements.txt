@@ -1,0 +1,10 @@
+pandas
+beautifulsoup4
+selenium
+webdriver-manager
+selenium-stealth
+lxml 
+seleniumbase
+fake_useragent
+lxml
+uc

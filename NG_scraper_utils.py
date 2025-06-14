@@ -13,7 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 def configure_webdriver():
     options = webdriver.ChromeOptions()
-    #options.add_argument("--headless")
+    options.add_argument("--headless")
     options.add_argument('--log-level=1')
     options.add_argument("--window-size=1920,1080")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -78,7 +78,7 @@ def scrape_current_page(soup):
             locations = ', '.join([loc.text.strip().replace('|', '') for loc in location_elements])
 
             # Extract job classification from URL
-            job_classification = link.split('/')[2] if len(link.split('/')) > 2 else 'N/A'
+            job_classification = 'N/A'
 
             jobs_data.append({
                 'Link': link,

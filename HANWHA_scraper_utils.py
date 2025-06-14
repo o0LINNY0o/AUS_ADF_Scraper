@@ -17,7 +17,7 @@ def configure_webdriver():
     options.add_argument('--log-level=1')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    # options.add_argument('--headless')  # Optional: Run headless
+    options.add_argument('--headless')  # Optional: Run headless
     options.add_argument('--disable-gpu')
 
     service = ChromeService(ChromeDriverManager().install())

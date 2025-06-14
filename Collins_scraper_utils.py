@@ -11,7 +11,7 @@ from fake_useragent import UserAgent
 import traceback
 
 def configure_webdriver():
-    driver = Driver(uc=True, headless=False)
+    driver = Driver(uc=True, headless=True)
     return driver
 
 def wait_for_jobs(driver, timeout=30):

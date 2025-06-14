@@ -28,7 +28,7 @@ def configure_webdriver():
 
 def scrape_job_data(driver, Job_Classification, location):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
-    base_url = 'https://clientapps.jobadder.com'
+    base_url = 'https://clientapps.jobadder.com/12102/goal-group'
     url = f'{base_url}/12102/goal-group'
     driver.get(url)
     print(f"Scraping {url}")
