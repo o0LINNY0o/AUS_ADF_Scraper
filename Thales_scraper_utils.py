@@ -28,7 +28,7 @@ def configure_webdriver():
 def scrape_job_data(driver, Job_Classification, location):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
 
-    url = 'https://careers.thalesgroup.com/global/en/australia-jobs'
+    url = 'https://careers.thalesgroup.com/global/en/search-results?keywords=Australia'
     driver.get(url)
     print(f"Scraping {url}")
 
