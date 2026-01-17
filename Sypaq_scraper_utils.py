@@ -106,31 +106,41 @@ def scrape_job_data(driver):
                 continue
         
         try:
-            # Check for "Load More" button
-            load_more_button = driver.find_element(By.ID, 'load-more')
+            # UPDATED: Look for the class name found in your HTML text
+            load_more_button = driver.find_element(By.CSS_SELECTOR, '.load-more-data')
             
-            # Check if button is disabled
-            if 'disabled' in load_more_button.get_attribute('class'):
-                print("Load More button is disabled. Stopping.")
+            # Check if the button is actually visible 
+            # (Angular uses ng-show, so the element might exist but be hidden)
+            if not load_more_button.is_displayed():
+                print("Load More button is no longer visible. Stopping.")
                 break
-                
-            # Scroll to the button and click it
+            
+            # Scroll to the button
             driver.execute_script("arguments[0].scrollIntoView(true);", load_more_button)
-            time.sleep(1)
+            time.sleep(1) # Short pause to let scroll settle
+            
+            # Click it using JavaScript (safest for Angular elements)
             driver.execute_script("arguments[0].click();", load_more_button)
             print("Clicked 'Load More'")
             
             # Wait for new content
-            time.sleep(1)
-            wait_for_jobs_to_load(driver)
+            # We wait for the number of job cards to increase
+            current_job_count = len(job_cards)
+            WebDriverWait(driver, 10).until(
+                lambda d: len(d.find_elements(By.CLASS_NAME, 'slide-up-item')) > current_job_count
+            )
+            time.sleep(2) # Extra buffer for text rendering
             
         except NoSuchElementException:
-            print("No more jobs to load. Stopping.")
+            print("No 'Load More' button found in DOM. Stopping.")
+            break
+        except TimeoutException:
+            print("Clicked load more, but no new jobs appeared. Stopping.")
             break
         except Exception as e:
-            print(f"Error clicking Load More button: {e}")
+            print(f"Error interacting with Load More button: {e}")
             break
-
+            
     return df
 
 def save_df_to_csv(df, output_dir):
