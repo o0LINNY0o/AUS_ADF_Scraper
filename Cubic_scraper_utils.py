@@ -17,7 +17,7 @@ def configure_webdriver():
     options.add_argument('--log-level=1')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",
@@ -40,7 +40,7 @@ def scrape_job_data(driver):
     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[data-automation-id="jobResults"]')))
     
     # Add a small delay to ensure dynamic content loads
-    time.sleep(2)
+    time.sleep(1)
 
     current_page = 1
 
@@ -112,7 +112,7 @@ def scrape_job_data(driver):
                 # Click the parent button element
                 parent_button = next_button.find_element(By.XPATH, './ancestor::button')
                 parent_button.click()
-                time.sleep(2)  # Wait for the next page to load
+                time.sleep(1)  # Wait for the next page to load
                 current_page += 1
             else:
                 print("Next button not found. Finishing scrape.")

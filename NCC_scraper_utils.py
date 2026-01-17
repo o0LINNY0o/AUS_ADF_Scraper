@@ -14,17 +14,17 @@ def scrape_job_data():
         print(f"Scraping {url}")
         
         # Wait for page to load
-        time.sleep(3)
+        time.sleep(1)
         
         # Switch to the iframe containing the job listings
         try:
             iframe_selector = "#newcastle_iframe"
-            sb.wait_for_element(iframe_selector, timeout=10)
+            sb.wait_for_element(iframe_selector, timeout=3)
             sb.switch_to_frame(iframe_selector)
             print("Successfully switched to iframe")
             
             # Wait for jobs to load inside iframe
-            time.sleep(3)
+            time.sleep(1)
             
         except Exception as e:
             print(f"Error switching to iframe: {e}")
@@ -41,11 +41,11 @@ def scrape_job_data():
             iframe_found = False
             for selector in alternative_selectors:
                 try:
-                    sb.wait_for_element(selector, timeout=5)
+                    sb.wait_for_element(selector, timeout=3)
                     sb.switch_to_frame(selector)
                     print(f"Successfully switched to iframe using selector: {selector}")
                     iframe_found = True
-                    time.sleep(3)
+                    time.sleep(1)
                     break
                 except:
                     continue
@@ -130,7 +130,7 @@ def scrape_job_data():
                 
                 for selector in pagination_selectors:
                     try:
-                        next_button = sb.find_element(selector, timeout=2)
+                        next_button = sb.find_element(selector, timeout=1)
                         if next_button and next_button.is_enabled():
                             break
                     except:
@@ -140,7 +140,7 @@ def scrape_job_data():
                     # Click the next button instead of navigating to URL (since we're in iframe)
                     try:
                         sb.click(next_button)
-                        time.sleep(3)
+                        time.sleep(1)
                         page_num += 1
                     except Exception as e:
                         print(f"Error clicking next button: {e}")

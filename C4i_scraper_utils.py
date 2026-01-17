@@ -17,7 +17,7 @@ def configure_webdriver():
     options.add_argument('--log-level=1')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",
@@ -42,7 +42,7 @@ def scrape_job_data(driver, job_classification="N/A", location="N/A"):
     )
     
     # Initial page load
-    time.sleep(2)  # Give a moment for JS to render content
+    time.sleep(1)  # Give a moment for JS to render content
 
     while True:
         soup = BeautifulSoup(driver.page_source, 'lxml')

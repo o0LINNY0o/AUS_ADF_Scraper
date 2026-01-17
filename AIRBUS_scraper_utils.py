@@ -14,10 +14,11 @@ import time
 def configure_webdriver():
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")
-    options.add_argument('--log-level=1')
+    options.add_argument('--log-level=3')
+    options.add_argument('--disable-background-networking') 
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",
@@ -89,7 +90,7 @@ def scrape_job_data(driver):
 
     driver.get(url)
     handle_cookies(driver)
-    time.sleep(2)
+    time.sleep(1)
     
     load_all_jobs(driver)
     

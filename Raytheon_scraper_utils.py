@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from fake_useragent import UserAgent
 
 def configure_webdriver():
-    driver = Driver(uc=True, headless=True)
+    driver = Driver(uc=True, headless=False)
 
     return driver
 
@@ -93,7 +93,7 @@ def check_next_button_exists(driver):
 
 def scrape_job_data(driver):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
-    url = 'https://careers.rtx.com/global/en/raytheon-australia-search-results'
+    url = 'https://careers.rtx.com/global/en/rtx-australia-job-search'
 
     try:
         driver.get(url)
@@ -122,7 +122,7 @@ def scrape_job_data(driver):
                 driver.execute_script("arguments[0].scrollIntoView(true);", next_button)
                 time.sleep(0.5)
                 driver.execute_script("arguments[0].click();", next_button)
-                time.sleep(2)
+                time.sleep(1)
 
                 page_num += 1
                 WebDriverWait(driver, 10).until(
@@ -140,8 +140,7 @@ def scrape_job_data(driver):
 def save_df_to_csv(df, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    file_path = os.path.join(output_dir, f'Raytheon_job_data_{timestamp}.csv')
+    file_path = os.path.join(output_dir, f'Raytheon_job_data.csv')
     df.to_csv(file_path, index=False)
     print(f"Data saved to {file_path}")
 

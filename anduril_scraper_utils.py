@@ -28,69 +28,67 @@ def configure_webdriver():
             )
     return driver
 
-def scrape_job_data(driver, Job_Classification, location):
+def scrape_job_data(driver, Job_Classification, location_filter):
     df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
-   
-    url = 'https://careers.au.baesystems.com/jobtools/jncustomsearch.searchResults?in_organid=16804&in_jobDate=All'
+
+    url = 'https://www.anduril.com/open-roles?search=australia'
     driver.get(url)
     print(f"Scraping {url}")
+    time.sleep(5)  # Increased wait time for page to fully load
 
-    # First, load ALL jobs by clicking "Load More" until disabled
+    # Scroll to load all content
+    last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
-        try:
-            load_more_button = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, 'load-more'))
-            )
-            if 'disabled' in load_more_button.get_attribute('class'):
-                print("Load More button is disabled. All jobs loaded.")
-                break
-            driver.execute_script("arguments[0].click();", load_more_button)
-            print("Clicked 'Load More'")
-            time.sleep(2)  # Wait for new content to load
-        except (NoSuchElementException, TimeoutException):
-            print("No Load More button found. All jobs loaded.")
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
             break
+        last_height = new_height
 
-    # Now scrape all jobs at once
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    job_rows = soup.select('tbody > tr')
     
-    print(f"Found {len(job_rows)} total job rows")
+    # Updated selectors to match the actual HTML structure
+    job_items = soup.select('button.OpenRolesSliceItem.open-roles-item')
     
-    if not job_rows:
-        print("No jobs found.")
+    print(f"Found {len(job_items)} job listings")
+
+    if not job_items:
+        print("No jobs found. Stopping.")
         return df
-        
-    for row in job_rows:
+
+    for item in job_items:
         try:
-            columns = row.find_all('td')
-            if len(columns) != 4:
+            # Find job title
+            job_title_element = item.find('div', class_='open-roles-item__title')
+            
+            # Find location
+            location_element = item.find('p', class_='location')
+            
+            # Find link
+            link_element = item.find('a', class_='ExternalLinkButton')
+
+            if not job_title_element or not location_element or not link_element:
                 continue
 
-            link_element = columns[0].find('a')
-            if not link_element:
-                continue
-
+            job_title = job_title_element.text.strip()
+            location = location_element.text.strip()
             link = link_element.get('href')
-            link_full = 'https://careers.au.baesystems.com/jobtools/' + link
-            
-            job_title = link_element.text.strip()
-            company = 'BAE'
-            job_classification = columns[1].text.strip()
-            location = columns[3].text.strip()
-            
+
+            company = 'Anduril'
+
             print(f"Scraped job: {job_title} - {location}")
 
             new_data = pd.DataFrame({
-                'Link': [link_full], 
-                'Job Title': [job_title], 
-                'Job Classification': [job_classification],
-                'Location': [location], 
+                'Link': [link],
+                'Job Title': [job_title],
+                'Job Classification': [Job_Classification],
+                'Location': [location],
                 'Company': [company]
             })
 
             df = pd.concat([df, new_data], ignore_index=True)
-            
+
         except Exception as e:
             print(f"Error scraping job: {e}")
 
@@ -104,10 +102,11 @@ def save_df_to_csv(df, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    file_path = os.path.join(output_dir, 'BAE_job_data.csv')
+    file_path = os.path.join(output_dir, 'Anduril_job_data.csv')
 
     df.to_csv(file_path, index=False)
     print(f"Data saved to {file_path}")
+    print(f"Total jobs scraped: {len(df)}")
 
 if __name__ == "__main__":
     driver = configure_webdriver()

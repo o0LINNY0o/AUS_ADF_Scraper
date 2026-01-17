@@ -21,7 +21,7 @@ def configure_webdriver():
     options.add_argument('--log-level=3')  
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",

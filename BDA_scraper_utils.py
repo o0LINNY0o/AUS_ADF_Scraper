@@ -19,7 +19,7 @@ def configure_webdriver():
     options.add_experimental_option('useAutomationExtension', False)
     
     # Initialize the Chrome WebDriver
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",

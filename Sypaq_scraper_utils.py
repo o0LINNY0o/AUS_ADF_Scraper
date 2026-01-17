@@ -17,7 +17,7 @@ def configure_webdriver():
     options.add_argument('--log-level=1')
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+    driver = webdriver.Chrome(options=options)
     stealth(driver,
             languages=["en-US", "en"],
             vendor="Google Inc.",
@@ -33,7 +33,7 @@ def wait_for_jobs_to_load(driver):
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "slide-up-item"))
         )
-        time.sleep(2)  # Additional wait to ensure dynamic content loads
+        time.sleep(1)  # Additional wait to ensure dynamic content loads
     except TimeoutException:
         print("Timeout waiting for jobs to load")
 
@@ -121,7 +121,7 @@ def scrape_job_data(driver):
             print("Clicked 'Load More'")
             
             # Wait for new content
-            time.sleep(3)
+            time.sleep(1)
             wait_for_jobs_to_load(driver)
             
         except NoSuchElementException:
