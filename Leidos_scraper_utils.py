@@ -1,96 +1,41 @@
 import os
 import pandas as pd
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException, ElementClickInterceptedException
-from selenium.webdriver.common.by import By
-from selenium_stealth import stealth
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from seleniumbase import SB
 import time
 
-def configure_webdriver():
-    try:
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument('--log-level=1')
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-        stealth(driver,
-                languages=["en-US", "en"],
-                vendor="Google Inc.",
-                platform="Win32",
-                webgl_vendor="Intel Inc.",
-                renderer="Intel Iris OpenGL Engine",
-                fix_hairline=True,
-                )
-        return driver
-    except Exception as e:
-        print(f"Error configuring webdriver: {e}")
-        raise
-
-def click_show_more_for_location(driver, location_element):
-    """Clicks 'Show more jobs' button for a specific location until no more jobs can be loaded."""
-    max_attempts = 10
-    attempts = 0
-    
-    while attempts < max_attempts:
-        try:
-            # Find the show more button for this location
-            show_more = location_element.find_element(By.CSS_SELECTOR, "a.js-more")
-            
-            if not show_more.is_displayed():
-                print(f"No more jobs to load for this location")
-                return
-            
-            # Scroll to the button
-            driver.execute_script("arguments[0].scrollIntoView(true);", show_more)
-            time.sleep(1)
-            
-            # Click the button
-            location_name = show_more.get_attribute('data-value')
-            print(f"Clicking 'Show more jobs' for {location_name}")
-            driver.execute_script("arguments[0].click();", show_more)
-            
-            # Wait for new content to load
-            time.sleep(2)
-            attempts += 1
-            
-        except StaleElementReferenceException:
-            print("Element became stale, moving to next location")
-            return
-        except ElementClickInterceptedException:
-            print("Click was intercepted, trying to scroll and click again")
-            time.sleep(1)
-            continue
-        except Exception as e:
-            print(f"Error clicking 'Show more jobs': {e}")
-            return
-
-def scrape_jobs_from_location_section(location_section):
-    """Scrapes all job listings from a specific location section."""
+def scrape_page_jobs(sb):
+    """Scrape all jobs from the current page."""
     jobs_data = []
     
     try:
-        # Find all job listings in this location section
-        job_listings = location_section.find_elements(By.CSS_SELECTOR, 'li.opening-job')
+        job_items = sb.find_elements('div.jobs-section__item')
+        print(f"Found {len(job_items)} job listings on this page")
         
-        for job in job_listings:
+        for job in job_items:
             try:
-                # Extract job details
-                link = job.find_element(By.CSS_SELECTOR, 'a.link--block').get_attribute('href')
-                job_title = job.find_element(By.CSS_SELECTOR, 'h4.details-title').text.strip()
+                # Extract job title and link
+                title_element = job.find_element('css selector', 'div.large-4 a')
+                job_title = title_element.text.strip()
+                link = title_element.get_attribute('href')
                 
-                # Get location from the section header
-                location = location_section.find_element(By.CSS_SELECTOR, 'h3.opening-title').text.strip()
-                
-                # Get job classification
+                # Extract location
                 try:
-                    job_classification = job.find_element(By.CSS_SELECTOR, 'span.margin--right--s').text.strip()
-                except NoSuchElementException:
+                    location_element = job.find_element('css selector', 'div.large-3.columns')
+                    location = location_element.text.strip()
+                    # Remove "Location: " prefix if present
+                    location = location.replace('Location:', '').strip()
+                except:
+                    location = 'Not specified'
+                
+                # Extract job classification (clearance level)
+                try:
+                    clearance_elements = job.find_elements('css selector', 'div.large-3.columns')
+                    if len(clearance_elements) >= 2:
+                        job_classification = clearance_elements[1].text.strip()
+                        job_classification = job_classification.replace('Clearance:', '').strip()
+                    else:
+                        job_classification = 'Not specified'
+                except:
                     job_classification = 'Not specified'
                 
                 jobs_data.append({
@@ -108,74 +53,72 @@ def scrape_jobs_from_location_section(location_section):
                 continue
                 
     except Exception as e:
-        print(f"Error scraping location section: {e}")
+        print(f"Error finding job listings: {e}")
     
     return jobs_data
 
-def scrape_job_data(driver):
-    df = pd.DataFrame(columns=['Link', 'Job Title', 'Job Classification', 'Location', 'Company'])
+def scrape_job_data(sb):
+    all_jobs_data = []
     
-    url = 'https://careers.smartrecruiters.com/Leidos1'
-    driver.get(url)
+    url = 'https://auscareers.leidos.com/search/jobs'
+    sb.open(url)
     print(f"Scraping {url}")
     
-    # Wait for the page to load initially
-    wait = WebDriverWait(driver, 10)
-    wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'js-openings-load')))
+    # Wait for the page to load
+    sb.wait_for_element('div.jobs-section__item', timeout=15)
     
-    try:
-        # Find all location sections
-        while True:
-            location_sections = driver.find_elements(By.CSS_SELECTOR, 'div.js-openings-load')
-            
-            if not location_sections:
-                print("No location sections found")
-                break
-            
-            for section in location_sections:
-                try:
-                    # Get location name
-                    location_name = section.find_element(By.CSS_SELECTOR, 'h3.opening-title').text.strip()
-                    print(f"\nProcessing location: {location_name}")
-                    
-                    # Click "Show more jobs" for this location until no more jobs
-                    click_show_more_for_location(driver, section)
-                    
-                    # Scrape all jobs from this location
-                    jobs_data = scrape_jobs_from_location_section(section)
-                    
-                    # Add to DataFrame
-                    if jobs_data:
-                        df = pd.concat([df, pd.DataFrame(jobs_data)], ignore_index=True)
-                        print(f"Total jobs scraped so far: {len(df)}")
-                    
-                except StaleElementReferenceException:
-                    print("Location section became stale, moving to next")
-                    continue
-                except Exception as e:
-                    print(f"Error processing location section: {e}")
-                    continue
-            
-            # Check if we need to load more locations
-            try:
-                load_more = driver.find_element(By.CSS_SELECTOR, 'a.js-more-locations')
-                if load_more.is_displayed():
-                    print("\nLoading more locations...")
-                    driver.execute_script("arguments[0].click();", load_more)
-                    time.sleep(2)
-                else:
+    # Add random delay to appear more human-like
+    sb.sleep(2)
+    
+    page_num = 1
+    
+    while True:
+        print(f"\n--- Scraping Page {page_num} ---")
+        
+        # Scrape jobs from current page
+        jobs_data = scrape_page_jobs(sb)
+        all_jobs_data.extend(jobs_data)
+        print(f"Total jobs scraped so far: {len(all_jobs_data)}")
+        
+        # Look for next page button
+        try:
+            if sb.is_element_visible('a.next_page'):
+                next_button = sb.find_element('a.next_page')
+                
+                # Check if next button is disabled
+                if 'disabled' in next_button.get_attribute('class'):
+                    print("No more pages to scrape")
                     break
-            except NoSuchElementException:
-                print("\nNo more locations to load")
-                break
-            except Exception as e:
-                print(f"Error loading more locations: {e}")
+                
+                # Human-like behavior: scroll around a bit before clicking
+                sb.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+                sb.sleep(1)
+                
+                # Scroll to next button and click
+                print(f"Moving to page {page_num + 1}...")
+                sb.scroll_to('a.next_page')
+                sb.sleep(1)
+                
+                # Click using SeleniumBase method (handles Cloudflare better)
+                sb.click('a.next_page')
+                
+                # Wait for new page to load
+                sb.sleep(3)
+                sb.wait_for_element('div.jobs-section__item', timeout=15)
+                
+                # Additional wait to ensure page fully loads
+                sb.sleep(2)
+                
+                page_num += 1
+            else:
+                print("No next page button found - finished scraping")
                 break
                 
-    except Exception as e:
-        print(f"Error during main scraping process: {e}")
+        except Exception as e:
+            print(f"Error navigating to next page: {e}")
+            break
     
-    return df
+    return pd.DataFrame(all_jobs_data)
 
 def save_df_to_csv(df, output_dir):
     if not os.path.exists(output_dir):
@@ -190,20 +133,19 @@ def save_df_to_csv(df, output_dir):
     except Exception as e:
         print(f"Error saving data to CSV: {e}")
 
-# Create output directory
-output_dir = '.\\csv_files'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
 # Main execution
 if __name__ == "__main__":
-    driver = None
-    try:
-        driver = configure_webdriver()
-        df = scrape_job_data(driver)
-        save_df_to_csv(df, output_dir)
-    except Exception as e:
-        print(f"Error in main execution: {e}")
-    finally:
-        if driver:
-            driver.quit()
+    output_dir = '.\\csv_files'
+    
+    # Use SeleniumBase with UC mode (undetected) to bypass Cloudflare
+    with SB(uc=True, headless=True) as sb:
+        try:
+            df = scrape_job_data(sb)
+            
+            if not df.empty:
+                save_df_to_csv(df, output_dir)
+            else:
+                print("No jobs were scraped")
+                
+        except Exception as e:
+            print(f"Error in main execution: {e}")
